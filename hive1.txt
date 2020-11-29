@@ -1,0 +1,74 @@
+GCP storage bucket path :- gs://ca675_assignment_1_shverma/
+
+----------------------------------------------------------------------------
+///////////QUERYING WITH HIVE/////////////////////////
+
+create external table if not exists data_analysis_posts_stg   
+(
+Id string,
+PostTypeId string,
+AcceptedAnswerId string,
+ParentId string,
+CreationDate string,
+DeletionDate string,
+Score int,
+ViewCount string,
+Body string,
+OwnerUserId string,
+OwnerDisplayName string,
+LastEditorUserId string,
+LastEditorDisplayName string,
+LastEditDate string,
+LastActivityDate string,
+Title String,
+Tags String,
+AnswerCount string,
+CommentCount string,
+FavoriteCount string,
+ClosedDate string,
+CommunityOwnedDate string, 
+ContentLicense string
+)
+row format delimited
+fields terminated by ','
+stored as textfile location 'gs://ca675_assignment_1_shverma/';
+
+-------------------------------------------------------------------------------
+// TASK 3.1
+
+select id, title, score from data_analysis_posts_stg order by score desc limit 10;
+
+------------------------------------------------------------------------------
+// TASK 3.2
+
+create table table2 as select OwnerUserId as A, SUM(Score) as B from data_analysis_posts_stg
+group by OwnerUserId;
+select * from table2 order by B desc limit 10;
+
+---------------------------------------------------------------------------------- 
+//TASK 3.3
+
+select COUNT(distinct OwnerUserId) from data_analysis_posts_stg where bodylike '%Hadoop%';
+
+---------------------------------------------------------------------------------
+// TASK 4
+
+create temporary macro max2(x INT, y INT) if(x>y,x,y);
+
+create temporary macro tfidf(tf FLOAT, df_t INT, n_docs INT) tf * (log(10, CAST(n_docs as FLOAT)/max2(1,df_t)) + 1.0);
+
+create table tb1 as select OwnerUserId, Title,Score from data_analysis_posts_stg order by Score desc limit 10;
+
+create view Expld as select OwnerUserId, word from tb1 LATERAL VIEW explode(tokenize(Title, True)) t as word where not is_stopword(word);
+
+create view term_freq as select OwnerUserid, word, freq from (select OwnerUserId, tf(word) as word2freq from Expld group by OwnerUserId) t LATERAL VIEW explode(word2freq) t2 as word, freq;
+
+create or replace view tf_idf as select word, COUNT(distinct OwnerUserId) docs from Expld group by word;
+
+select COUNT(ownerUserId) from tf_idf;
+
+set hivevar:n_docs=10;
+
+create or replace view tf_idf as select tf.OwnerUserId, tf.word, tfidf(tf.freq, df.docs,${n_docs}) as tf_idf from term_freq tf JOIN document_frequency dfON(tf.word=df.word) order by tf_idf desc;
+
+select * from tf_idf;
