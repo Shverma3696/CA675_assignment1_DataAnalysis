@@ -6,15 +6,17 @@ Data was fetched from stack exchage using the SQL. Top 200,000 posts were fetche
 
 The following query was used to check the top 200,000 posts.
 
-select count(*) from posts where posts.ViewCount > 36779
+'''select count(*) from posts where posts.ViewCount > 36779'''
+
 Futher the ViewCount was taken as a reference to fetch the first, second, third and fourth 50000 queries
 
-select top 50000 * from posts where posts.ViewCount>36779 order by posts.ViewCount desc
+'''select top 50000 * from posts where posts.ViewCount>36779 order by posts.ViewCount desc'''
+
 For the next 50000 posts we use the last row as the limit
 
-select top 50000 * from posts where posts.ViewCount < 112523 order by posts.ViewCount desc
+'''select top 50000 * from posts where posts.ViewCount < 112523 order by posts.ViewCount desc
 select top 50000 * from posts where posts.ViewCount < 66243 order by posts.ViewCount desc
-select top 50000 * from posts where posts.ViewCount < 47290 order by posts.ViewCount desc
+select top 50000 * from posts where posts.ViewCount < 47290 order by posts.ViewCount desc'''
 
 
 ##2. Cleaning and merging data in python
