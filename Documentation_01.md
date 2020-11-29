@@ -36,21 +36,18 @@ Futhermore, used this bucket's path for creating tables in HIVE.
 
 --TOP 10 POSTS BY SCORE
 
-```select Id, Title FROM data_analysis_stg ORDER BY Score DESC LIMIT 10;```
+```select Id, Title FROM data_analysis_posts_stg order BY Score DESC limit 10;```
 
 --TOP 10 USERS BY POST SCORE
 ```
-select OwnerUserId, SUM(Score)AS FullScore
-from data_analysis_stg
-Order BY OwnerUserId
-Order BY FullScore DESC LIMIT 10;
+create table table2 as select OwnerUserId as A, SUM(Score) as B from data_analysis_posts_stg 
+group BY OwnerUserId;
+select * from table2 order by B DESC limit 10;
 ```
 
 --The number of distinct users, who used the word “Hadoop” in one of their posts
 ```
-select COUNT (DISTINCT OwnerUserId)
-from data_analysis_stg
-WHERE (Body LIKE '%hadoop%' OR Title LIKE '%hadoop%' OR Tags LIKE '%hadoop%');
+select COUNT (DISTINCT OwnerUserId) from data_analysis_posts_stg where bodylike '%Hadoop%';
 ```
 
 ## 4. Calculating the per user TF-IDF for top 10 users using HIVE
@@ -62,13 +59,19 @@ create temporary macro max2(x INT, y INT) if(x>y,x,y);
 
 create temporary macro tfidf(tf FLOAT, df_t INT, n_docs INT) tf * (log(10, CAST(n_docs as FLOAT)/max2(1,df_t)) + 1.0);
 
-create table Qtable as select OwnerUserId, Title,Score from buz order by Score desc limit 10;
+create table tb1 as select OwnerUserId, Title,Score from data_analysis_posts_stg order by Score desc limit 10;
 
-create or replace view view1_Explode as select OwnerUserId, eachword from table1 LATERAL VIEW explode(tokenize(Title, True)) t as eachword where not is_stopword(eachword);
+create view Expld as select OwnerUserId, word from tb1 LATERAL VIEW explode(tokenize(Title, True)) t as word where not is_stopword(word);
 
-create or replace view view2 as select OwnerUserid, eachword, freq from (select OwnerUserId, tf(eachword) as word2freq from view1_Explode group by OwnerUserId) t LATERAL VIEW explode(word2freq) t2 as eachword, freq;
+create view term_freq as select OwnerUserid, word, freq from (select OwnerUserId, tf(word) as word2freq from Expld group by OwnerUserId) t LATERAL VIEW explode(word2freq) t2 as word, freq;
 
-create or replace view view_final as select * from (select OwnerUserId, eachword, freq, rank() over (partition by OwnerUserId order by freq desc) as rank from view2 ) t where rank < 10;
+create or replace view tf_idf as select word, COUNT(distinct OwnerUserId) docs from Expld group by word;
 
-select * from view_final;
+select COUNT(ownerUserId) from tf_idf;
+
+set hivevar:n_docs=10;
+
+create or replace view tf_idf as select tf.OwnerUserId, tf.word, tfidf(tf.freq, df.docs,${n_docs}) as tf_idf from term_freq tf JOIN document_frequency dfON(tf.word=df.word) order by tf_idf desc;
+
+select * from tf_idf;
 ```
