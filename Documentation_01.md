@@ -20,9 +20,9 @@ select top 50000 * from posts where ViewCount > 36779 order by posts.ViewCount d
 For the next 50000 posts we use the last row as the limit
 
 ```
-select top 50000 * from posts where ViewCount < 112523 order by posts.ViewCount desc
-select top 50000 * from posts where ViewCount < 66243 order by posts.ViewCount desc
-select top 50000 * from posts where ViewCount < 47290 order by posts.ViewCount desc
+select top 50000 * from posts where ViewCount <= 112523 order by posts.ViewCount desc
+select top 50000 * from posts where ViewCount <= 66243 order by posts.ViewCount desc
+select top 50000 * from posts where ViewCount <= 47290 order by posts.ViewCount desc
 ```
 
 
